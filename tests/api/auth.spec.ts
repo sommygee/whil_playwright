@@ -449,7 +449,40 @@ test.describe('Authentication API Tests', () => {
     expect([400, 401, 403]).toContain(response.status());
   });
 
-  test('15 - Login with non-existent email', async ({ request }) => {
+  test('15 - Access profile with valid token', async ({ request }) => {
+    const account = getTestAccount();
+    test.skip(!account, 'A reusable test account is required');
+
+    const loginResponse = await request.post(
+      `${BASE_URL}/auth/login`,
+      { data: { email: account!.email, password: account!.password } }
+    );
+    const loginBody = await loginResponse.json();
+
+    expect(loginResponse.status()).toBe(200);
+    expect(loginBody.token).toEqual(expect.any(String));
+
+    const profileResponse = await request.get(`${BASE_URL}/profile`, {
+      headers: {
+        Authorization: `Bearer ${loginBody.token}`,
+      },
+    });
+    const profileBody = await profileResponse.json();
+
+    expect(profileResponse.status()).toBe(200);
+    expect(profileBody).toEqual(expect.any(Object));
+  });
+
+  test('16 - Reject profile request without token', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/profile`);
+    const body = await response.json();
+
+    expect(response.ok()).toBeFalsy();
+    expect([401, 403]).toContain(response.status());
+    expect(body).toHaveProperty('message');
+  });
+
+  test('17 - Login with non-existent email', async ({ request }) => {
     const response = await request.post(
       `${BASE_URL}/auth/login`,
       {
@@ -470,7 +503,7 @@ test.describe('Authentication API Tests', () => {
     expect([400, 401, 404]).toContain(response.status());
   });
 
-  test('16 - Login with missing email', async ({ request }) => {
+  test('18 - Login with missing email', async ({ request }) => {
     const response = await request.post(
       `${BASE_URL}/auth/login`,
       {
@@ -490,7 +523,7 @@ test.describe('Authentication API Tests', () => {
     expect([400, 401, 422]).toContain(response.status());
   });
 
-  test('17 - Login with missing password', async ({ request }) => {
+  test('19 - Login with missing password', async ({ request }) => {
     const account = getTestAccount();
     const response = await request.post(
       `${BASE_URL}/auth/login`,
@@ -517,7 +550,7 @@ test.describe('Authentication API Tests', () => {
    * ============================================================
    */
 
-  test('18 - Verify account with invalid token', async ({ request }) => {
+  test('20 - Verify account with invalid token', async ({ request }) => {
     const response = await request.get(
       `${BASE_URL}/auth/verify`,
       {
@@ -543,7 +576,7 @@ test.describe('Authentication API Tests', () => {
    * ============================================================
    */
 
-  test('19 - Forgot password with invalid email', async ({ request }) => {
+  test('21 - Forgot password with invalid email', async ({ request }) => {
     const response = await request.post(
       `${BASE_URL}/auth/forgot-password`,
       {
@@ -563,7 +596,7 @@ test.describe('Authentication API Tests', () => {
     expect([400, 404, 422]).toContain(response.status());
   });
 
-  test('20 - Forgot password with missing email', async ({ request }) => {
+  test('22 - Forgot password with missing email', async ({ request }) => {
     const response = await request.post(
       `${BASE_URL}/auth/forgot-password`,
       {
@@ -587,11 +620,12 @@ test.describe('Authentication API Tests', () => {
    * ============================================================
    */
 
-  test('21 - Verify reset token with invalid token', async ({ request }) => {
+  test('23 - Verify reset token with invalid token', async ({ request }) => {
     const response = await request.post(
       `${BASE_URL}/auth/verify-reset-token`,
       {
         data: {
+          email: 'qa@example.com',
           token: 'invalid-reset-token',
         },
       }
@@ -613,13 +647,14 @@ test.describe('Authentication API Tests', () => {
    * ============================================================
    */
 
-  test('22 - Reset password with invalid token', async ({ request }) => {
+  test('24 - Reset password with invalid token', async ({ request }) => {
     const response = await request.post(
       `${BASE_URL}/auth/reset-password`,
       {
         data: {
+          email: 'qa@example.com',
           token: 'invalid-reset-token',
-          password: 'NewPassword123!',
+          newPassword: 'NewPassword123!',
         },
       }
     );
@@ -640,7 +675,7 @@ test.describe('Authentication API Tests', () => {
    * ============================================================
    */
 
-  test('23 - Google authentication with invalid token', async ({ request }) => {
+  test('25 - Google authentication with invalid token', async ({ request }) => {
     const response = await request.post(
       `${BASE_URL}/auth/google`,
       {
